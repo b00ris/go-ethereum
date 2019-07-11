@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/params"
+	"fmt"
 )
 
 // memoryGasCost calculates the quadratic gas for memory expansion. It does so
@@ -110,10 +111,17 @@ func gasSStore(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, m
 		y, x    = stack.Back(1), stack.Back(0)
 		current = evm.StateDB.GetState(contract.Address(), common.BigToHash(x))
 	)
+	fmt.Println("core/vm/gas_table.go:116 gasSStore")
+	fmt.Println("loc", x)
+	fmt.Println("val", y)
+	fmt.Println(contract.Address().String(), "core/vm/gas_table.go:117 for", common.BigToHash(x), " current=",current)
+
 	// The legacy gas metering only takes into consideration the current state
 	// Legacy rules should be applied if we are in Petersburg (removal of EIP-1283)
 	// OR Constantinople is not active
+	fmt.Println("evm.chainRules.IsPetersburg", evm.chainRules.IsPetersburg, "!evm.chainRules.IsConstantinople", !evm.chainRules.IsConstantinople)
 	if evm.chainRules.IsPetersburg || !evm.chainRules.IsConstantinople {
+		fmt.Println("evm.chainRules.IsPetersburg || !evm.chainRules.IsConstantinople")
 		// This checks for 3 scenario's and calculates gas accordingly:
 		//
 		// 1. From a zero-value address to a non-zero value         (NEW VALUE)
@@ -144,10 +152,15 @@ func gasSStore(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, m
 	//       2.2.2.1. If original value is 0, add 19800 gas to refund counter.
 	// 	     2.2.2.2. Otherwise, add 4800 gas to refund counter.
 	value := common.BigToHash(y)
+	fmt.Println("contract", contract.Address().String())
+	fmt.Println("value", value.String())
+	fmt.Println("current", current.String())
 	if current == value { // noop (1)
 		return params.NetSstoreNoopGas, nil
 	}
 	original := evm.StateDB.GetCommittedState(contract.Address(), common.BigToHash(x))
+	fmt.Println("core/vm/gas_table.go:178 ", original, value)
+
 	if original == current {
 		if original == (common.Hash{}) { // create slot (2.1.1)
 			return params.NetSstoreInitGas, nil
@@ -164,6 +177,7 @@ func gasSStore(gt params.GasTable, evm *EVM, contract *Contract, stack *Stack, m
 			evm.StateDB.AddRefund(params.NetSstoreClearRefund)
 		}
 	}
+	fmt.Println("core/vm/gas_table.go:178 ", original, value)
 	if original == value {
 		if original == (common.Hash{}) { // reset to original inexistent slot (2.2.2.1)
 			evm.StateDB.AddRefund(params.NetSstoreResetClearRefund)

@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/davecgh/go-spew/spew"
 )
 
 type revision struct {
@@ -281,6 +282,7 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 // GetState retrieves a value from the given account's storage trie.
 func (self *StateDB) GetState(addr common.Address, hash common.Hash) common.Hash {
 	stateObject := self.getStateObject(addr)
+	fmt.Println("core/state/statedb.go:286 GetState", addr.String(), stateObject)
 	if stateObject != nil {
 		return stateObject.GetState(self.db, hash)
 	}
@@ -381,6 +383,7 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 
 func (self *StateDB) SetState(addr common.Address, key, value common.Hash) {
 	stateObject := self.GetOrNewStateObject(addr)
+	fmt.Println("**", addr.String(), key.String(), value.String())
 	if stateObject != nil {
 		stateObject.SetState(self.db, key, value)
 	}
@@ -612,6 +615,7 @@ func (self *StateDB) RevertToSnapshot(revid int) {
 	}
 	snapshot := self.validRevisions[idx].journalIndex
 
+	fmt.Println("core/state/statedb.go:617 RevertToSnapshot")
 	// Replay the journal to undo changes and remove invalidated snapshots
 	self.journal.revert(self, snapshot)
 	self.validRevisions = self.validRevisions[:idx]
@@ -625,6 +629,8 @@ func (self *StateDB) GetRefund() uint64 {
 // Finalise finalises the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
 func (s *StateDB) Finalise(deleteEmptyObjects bool) {
+	fmt.Println("core/state/statedb.go:631 s.journal.dirties")
+	spew.Dump( s.journal.dirties)
 	for addr := range s.journal.dirties {
 		stateObject, exist := s.stateObjects[addr]
 		if !exist {
@@ -671,6 +677,7 @@ func (self *StateDB) Prepare(thash, bhash common.Hash, ti int) {
 }
 
 func (s *StateDB) clearJournalAndRefund() {
+	fmt.Println("core/state/statedb.go:678 clearJournalAndRefund")
 	s.journal = newJournal()
 	s.validRevisions = s.validRevisions[:0]
 	s.refund = 0
@@ -679,7 +686,7 @@ func (s *StateDB) clearJournalAndRefund() {
 // Commit writes the state to the underlying in-memory trie database.
 func (s *StateDB) Commit(deleteEmptyObjects bool) (root common.Hash, err error) {
 	defer s.clearJournalAndRefund()
-
+	fmt.Println("core/state/statedb.go:687 s.journal.dirties")
 	for addr := range s.journal.dirties {
 		s.stateObjectsDirty[addr] = struct{}{}
 	}

@@ -99,6 +99,11 @@ func (t *Trie) Get(key []byte) []byte {
 func (t *Trie) TryGet(key []byte) ([]byte, error) {
 	key = keybytesToHex(key)
 	value, newroot, didResolve, err := t.tryGet(t.root, key, 0)
+	fmt.Println("trie/trie.go:102 ", )
+	fmt.Println("key", key)
+	fmt.Println("value", value)
+	fmt.Println("didResolve", didResolve)
+	fmt.Println("newroot", newroot)
 	if err == nil && didResolve {
 		t.root = newroot
 	}
@@ -106,8 +111,10 @@ func (t *Trie) TryGet(key []byte) ([]byte, error) {
 }
 
 func (t *Trie) tryGet(origNode node, key []byte, pos int) (value []byte, newnode node, didResolve bool, err error) {
+	fmt.Println("origNode", origNode)
 	switch n := (origNode).(type) {
 	case nil:
+		fmt.Println("nil")
 		return nil, nil, false, nil
 	case valueNode:
 		return n, n, false, nil

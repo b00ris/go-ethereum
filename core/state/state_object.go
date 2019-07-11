@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/rlp"
+	"runtime"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -164,17 +165,24 @@ func (s *stateObject) getTrie(db Database) Trie {
 // GetState retrieves a value from the account storage trie.
 func (s *stateObject) GetState(db Database, key common.Hash) common.Hash {
 	// If we have a dirty value for this state entry, return it
+	fmt.Println("core/state/state_object.go:168 GetState", s.Address().String())
+	fmt.Println(s.dirtyStorage)
+
 	value, dirty := s.dirtyStorage[key]
 	if dirty {
+		fmt.Println("value=",value)
 		return value
 	}
 	// Otherwise return the entry's original value
-	return s.GetCommittedState(db, key)
+	value = s.GetCommittedState(db, key)
+	fmt.Println("value=",value)
+	return value
 }
 
 // GetCommittedState retrieves a value from the committed account storage trie.
 func (s *stateObject) GetCommittedState(db Database, key common.Hash) common.Hash {
 	// If we have the original value cached, return that
+	fmt.Println("core/state/state_object.go:182 GetCommittedState", s.address.String(), key.String())
 	value, cached := s.originStorage[key]
 	if cached {
 		return value
@@ -185,6 +193,7 @@ func (s *stateObject) GetCommittedState(db Database, key common.Hash) common.Has
 	}
 	// Otherwise load the value from the database
 	enc, err := s.getTrie(db).TryGet(key[:])
+	fmt.Println("core/state/state_object.go:196 s.getTrie(db).TryGet", err, enc)
 	if err != nil {
 		s.setError(err)
 		return common.Hash{}
@@ -196,6 +205,7 @@ func (s *stateObject) GetCommittedState(db Database, key common.Hash) common.Has
 		}
 		value.SetBytes(content)
 	}
+	fmt.Println("core/state/state_object.go:208 value", value)
 	s.originStorage[key] = value
 	return value
 }
@@ -204,6 +214,8 @@ func (s *stateObject) GetCommittedState(db Database, key common.Hash) common.Has
 func (s *stateObject) SetState(db Database, key, value common.Hash) {
 	// If the new value is the same as old, don't set
 	prev := s.GetState(db, key)
+	fmt.Println("core/state/state_object.go:207 SetState", key.String(), value)
+	fmt.Println(prev.String(), value.String())
 	if prev == value {
 		return
 	}
@@ -302,6 +314,9 @@ func (s *stateObject) SubBalance(amount *big.Int) {
 }
 
 func (s *stateObject) SetBalance(amount *big.Int) {
+	fmt.Println("core/state/state_object.go:240 SetBalance", s.address.String(), amount.String()  )
+	fmt.Println(Caller(7))
+
 	s.db.journal.append(balanceChange{
 		account: &s.address,
 		prev:    new(big.Int).Set(s.data.Balance),
@@ -400,4 +415,13 @@ func (s *stateObject) Nonce() uint64 {
 // interface. Interfaces are awesome.
 func (s *stateObject) Value() *big.Int {
 	panic("Value on stateObject should never be called")
+}
+
+func Caller(n int) string {
+	b:=new(bytes.Buffer)
+	for i:=1;i<n;i++ {
+		_,f,l,_:=runtime.Caller(i)
+		fmt.Fprintf(b, "%v %v:%v\n",i,f,l)
+	}
+	return b.String()
 }

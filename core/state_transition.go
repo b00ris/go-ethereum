@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"fmt"
 )
 
 var (
@@ -191,6 +192,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 
 	// Pay intrinsic gas
 	gas, err := IntrinsicGas(st.data, contractCreation, homestead)
+	fmt.Println("core/state_transition.go:200 IntrinsicGas", gas)
 	if err != nil {
 		return nil, 0, false, err
 	}
@@ -222,6 +224,9 @@ func (st *StateTransition) TransitionDb() (ret []byte, usedGas uint64, failed bo
 		}
 	}
 	st.refundGas()
+	fmt.Println("core/state_transition.go:231 st.evm.Coinbase", st.evm.Coinbase.String(), "gas used:", st.gasUsed(), "gas price", st.gasPrice)
+
+
 	st.state.AddBalance(st.evm.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
 	return ret, st.gasUsed(), vmerr != nil, err
@@ -234,6 +239,8 @@ func (st *StateTransition) refundGas() {
 		refund = st.state.GetRefund()
 	}
 	st.gas += refund
+	fmt.Println("core/state_transition.go:245 refund Gas", refund, st.state.GetRefund())
+
 
 	// Return ETH for remaining gas, exchanged at the original rate.
 	remaining := new(big.Int).Mul(new(big.Int).SetUint64(st.gas), st.gasPrice)
@@ -246,5 +253,6 @@ func (st *StateTransition) refundGas() {
 
 // gasUsed returns the amount of gas used up by the state transition.
 func (st *StateTransition) gasUsed() uint64 {
+	fmt.Println("core/state_transition.go:256", st.initialGas, st.gas)
 	return st.initialGas - st.gas
 }

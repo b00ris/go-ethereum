@@ -28,6 +28,28 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 )
 
+
+func TestStateDebug(t *testing.T)  {
+	st := new(testMatcher)
+	st.whitelist(`^stSStoreTest/InitCollision.json`)
+	//st.fails(`^stSStoreTest/InitCollision.json/Constantinople/0`, "work in progress")
+	st.walk(t, stateTestDir, func(t *testing.T, name string, test *StateTest) {
+		for _, subtest := range test.Subtests() {
+			subtest := subtest
+			key := fmt.Sprintf("%s/%d", subtest.Fork, subtest.Index)
+			name := name + "/" + key
+			fmt.Println("tests/state_test.go:41", name)
+			t.Run(key, func(t *testing.T) {
+				withTrace(t, test.gasLimit(subtest), func(vmconfig vm.Config) error {
+					_, err := test.Run(subtest, vmconfig)
+					return st.checkFailure(t, name, err)
+				})
+			})
+		}
+	})
+}
+
+
 func TestState(t *testing.T) {
 	t.Parallel()
 
